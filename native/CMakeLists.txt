@@ -13,13 +13,29 @@ if(MSVC)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 endif()
 
-# vcpkg-provided dependencies. With the bundled vcpkg.json manifest, vcpkg
-# (in manifest mode) installs these into the build tree at configure time.
-find_package(JPEG          REQUIRED)
+# vcpkg-provided dependencies. We use CONFIG-mode find_package wherever
+# possible because vcpkg's static-triplet ports are more reliably
+# discoverable through their shipped *Config.cmake files than through
+# CMake's legacy Find*.cmake modules.
+find_package(libjpeg-turbo CONFIG REQUIRED)
 find_package(PNG           REQUIRED)
 find_package(TIFF          REQUIRED)
-find_package(WebP CONFIG   REQUIRED)
+find_package(WebP    CONFIG REQUIRED)
 find_package(libheif CONFIG REQUIRED)
+
+# libjpeg-turbo's CMake config exports different target names depending
+# on whether it was built static or shared; pick whichever is present.
+if(TARGET libjpeg-turbo::jpeg-static)
+    set(IC_JPEG_TARGET libjpeg-turbo::jpeg-static)
+elseif(TARGET libjpeg-turbo::jpeg)
+    set(IC_JPEG_TARGET libjpeg-turbo::jpeg)
+elseif(TARGET libjpeg-turbo::turbojpeg-static)
+    set(IC_JPEG_TARGET libjpeg-turbo::turbojpeg-static)
+elseif(TARGET libjpeg-turbo::turbojpeg)
+    set(IC_JPEG_TARGET libjpeg-turbo::turbojpeg)
+else()
+    message(FATAL_ERROR "libjpeg-turbo found but no expected target was exported.")
+endif()
 
 add_library(img_convert SHARED
     src/img_convert.cpp
@@ -37,7 +53,7 @@ target_include_directories(img_convert PUBLIC
 target_compile_definitions(img_convert PRIVATE IMG_CONVERT_BUILD_DLL=1)
 
 target_link_libraries(img_convert PRIVATE
-    JPEG::JPEG
+    ${IC_JPEG_TARGET}
     PNG::PNG
     TIFF::TIFF
     WebP::webp
