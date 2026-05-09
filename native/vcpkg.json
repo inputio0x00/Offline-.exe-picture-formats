@@ -1,3 +1,4 @@
+@'
 {
   "name": "img-convert",
   "version-string": "1.0.0",
@@ -12,5 +13,6 @@
       "features": ["hevc"]
     },
     "x265"
-  ],
+  ]
 }
+'@ | Set-Content -Path .\native\vcpkg.json -Encoding UTF8
