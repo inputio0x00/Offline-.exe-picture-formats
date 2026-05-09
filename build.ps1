@@ -5,12 +5,12 @@
 
 .DESCRIPTION
     Steps:
-      1. Bootstraps vcpkg into ./vcpkg/ on first run (clone + bootstrap-vcpkg.bat).
-      2. Configures and builds the native DLL (img_convert.dll) using the
-         x64-windows-static triplet so all C++ dependencies (libheif, x265,
-         libpng, libjpeg-turbo, libtiff, libwebp) are statically linked into
-         a single DLL with no extra runtime files.
-      3. Runs `dotnet publish` with PublishProfile=SingleFile to produce a
+      1. Bootstraps vcpkg into ./vcpkg/ on first run.
+      2. Installs native dependencies via `vcpkg install` (classic mode):
+         libheif (with hevc/x265), libpng, libjpeg-turbo, libtiff, libwebp.
+      3. Configures and builds the native DLL (img_convert.dll) with the
+         x64-windows-static triplet so all C++ deps fold into one DLL.
+      4. Runs `dotnet publish` with PublishProfile=SingleFile to produce a
          self-contained single-file .exe under ./dist/.
 
 .PARAMETER Configuration
@@ -19,16 +19,21 @@
 .PARAMETER SkipNative
     Skip native build (useful when only the C# UI changed).
 
+.PARAMETER SkipDeps
+    Skip the `vcpkg install` step (assume deps are already installed).
+
 .EXAMPLE
     .\build.ps1
     .\build.ps1 -Configuration Release
     .\build.ps1 -SkipNative
+    .\build.ps1 -SkipDeps        # skip vcpkg install, just rebuild
 #>
 [CmdletBinding()]
 param(
     [ValidateSet('Debug','Release')]
     [string]$Configuration = 'Release',
-    [switch]$SkipNative
+    [switch]$SkipNative,
+    [switch]$SkipDeps
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,7 +44,19 @@ $nativeDir = Join-Path $root 'native'
 $appDir    = Join-Path $root 'app'
 $buildDir  = Join-Path $nativeDir 'build'
 $vcpkgDir  = Join-Path $root 'vcpkg'
+$vcpkgExe  = Join-Path $vcpkgDir 'vcpkg.exe'
 $distDir   = Join-Path $root 'dist'
+$triplet   = 'x64-windows-static'
+
+# Native deps installed by `vcpkg install`. libheif's hevc feature pulls in
+# x265 (the HEIF encoder); libde265 is a transitive dep for HEIF decode.
+$vcpkgPackages = @(
+    'libjpeg-turbo',
+    'libpng',
+    'tiff',
+    'libwebp',
+    'libheif[hevc]'
+)
 
 function Write-Step($msg) {
     Write-Host ""
@@ -55,7 +72,21 @@ if (-not $SkipNative) {
         if ($LASTEXITCODE -ne 0) { throw "vcpkg bootstrap failed." }
     }
 
-    Write-Step "Configuring native (CMake + vcpkg manifest, triplet=x64-windows-static)"
+    if (-not (Test-Path $vcpkgExe)) {
+        # vcpkg dir exists but exe is missing — re-run bootstrap.
+        & (Join-Path $vcpkgDir 'bootstrap-vcpkg.bat') -disableMetrics
+        if ($LASTEXITCODE -ne 0) { throw "vcpkg bootstrap failed." }
+    }
+
+    if (-not $SkipDeps) {
+        Write-Step "Installing native deps via vcpkg (triplet=$triplet)"
+        # Pass each package as its own argument so brackets in 'libheif[hevc]'
+        # are not treated as a here-string by PowerShell.
+        & $vcpkgExe install --triplet=$triplet --x-install-root=(Join-Path $vcpkgDir 'installed') @vcpkgPackages
+        if ($LASTEXITCODE -ne 0) { throw "vcpkg install failed." }
+    }
+
+    Write-Step "Configuring native (CMake, triplet=$triplet)"
     if (-not (Test-Path $buildDir)) { New-Item -ItemType Directory -Path $buildDir | Out-Null }
 
     $toolchain = Join-Path $vcpkgDir 'scripts/buildsystems/vcpkg.cmake'
@@ -65,8 +96,9 @@ if (-not $SkipNative) {
         -A x64 `
         -DCMAKE_BUILD_TYPE=$Configuration `
         -DCMAKE_TOOLCHAIN_FILE="$toolchain" `
-        -DVCPKG_TARGET_TRIPLET=x64-windows-static `
-        -DVCPKG_HOST_TRIPLET=x64-windows-static
+        -DVCPKG_TARGET_TRIPLET=$triplet `
+        -DVCPKG_HOST_TRIPLET=$triplet `
+        -DVCPKG_MANIFEST_MODE=OFF
     if ($LASTEXITCODE -ne 0) { throw "CMake configure failed." }
 
     Write-Step "Building native ($Configuration)"
@@ -75,7 +107,6 @@ if (-not $SkipNative) {
 
     $dllSrc = Join-Path $buildDir "$Configuration/img_convert.dll"
     if (-not (Test-Path $dllSrc)) {
-        # Some generators put the DLL directly in build/ instead of build/<Config>/.
         $alt = Join-Path $buildDir 'img_convert.dll'
         if (Test-Path $alt) { $dllSrc = $alt }
     }

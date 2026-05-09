@@ -42,6 +42,7 @@ Useful flags:
 ```powershell
 .\build.ps1 -Configuration Debug      # debug build
 .\build.ps1 -SkipNative               # rebuild only the .NET app
+.\build.ps1 -SkipDeps                 # skip `vcpkg install`, just rebuild
 ```
 
 The result is `dist/ImgConvert.exe`.
