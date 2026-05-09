@@ -80,10 +80,22 @@ if (-not $SkipNative) {
 
     if (-not $SkipDeps) {
         Write-Step "Installing native deps via vcpkg (triplet=$triplet)"
-        # Pass each package as its own argument so brackets in 'libheif[hevc]'
-        # are not treated as a here-string by PowerShell.
-        & $vcpkgExe install --triplet=$triplet --x-install-root=(Join-Path $vcpkgDir 'installed') @vcpkgPackages
-        if ($LASTEXITCODE -ne 0) { throw "vcpkg install failed." }
+        # PowerShell passes args to native commands by stringifying each
+        # element of an array. Build the argv ourselves and splat it so
+        # parenthesized expressions, brackets in 'libheif[hevc]', and the
+        # like reach vcpkg.exe verbatim. Drop --x-install-root: vcpkg
+        # defaults to <vcpkg-root>/installed/, which is what we want.
+        # Clear VCPKG_ROOT so the VS-bundled vcpkg path doesn't shadow ours.
+        $prevVcpkgRoot = $env:VCPKG_ROOT
+        $env:VCPKG_ROOT = $null
+        try {
+            $vcpkgArgs = @('install', "--triplet=$triplet") + $vcpkgPackages
+            & $vcpkgExe @vcpkgArgs
+            if ($LASTEXITCODE -ne 0) { throw "vcpkg install failed." }
+        }
+        finally {
+            $env:VCPKG_ROOT = $prevVcpkgRoot
+        }
     }
 
     Write-Step "Configuring native (CMake, triplet=$triplet)"
