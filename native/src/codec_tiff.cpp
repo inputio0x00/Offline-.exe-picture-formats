@@ -4,7 +4,6 @@
 #include <cstring>
 
 #include <tiffio.h>
-#include <tiffio.hxx>
 
 #if defined(_WIN32)
   #define WIN32_LEAN_AND_MEAN
