@@ -1,0 +1,17 @@
+{
+  "name": "img-convert",
+  "version-string": "1.0.0",
+  "description": "Native image format converter (JPG/PNG/WEBP/TIFF/HEIF).",
+  "dependencies": [
+    "libjpeg-turbo",
+    "libpng",
+    "tiff",
+    "libwebp",
+    {
+      "name": "libheif",
+      "features": ["hevc"]
+    },
+    "x265"
+  ],
+  "builtin-baseline": "2024-09-30"
+}

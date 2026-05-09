@@ -1,0 +1,329 @@
+<ui:FluentWindow x:Class="ImgConvert.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:vm="clr-namespace:ImgConvert.ViewModels"
+        xmlns:cv="clr-namespace:ImgConvert.Converters"
+        Title="ImgConvert"
+        Width="1100" Height="720"
+        MinWidth="900" MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        AllowDrop="True"
+        DragOver="OnDragOver"
+        Drop="OnDrop">
+
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+
+    <Window.Resources>
+        <cv:BoolToVisibility x:Key="BoolToVis"/>
+        <cv:StatusToBrush    x:Key="StatusToBrush"/>
+        <cv:StatusToText     x:Key="StatusToText"/>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Custom title bar -->
+        <ui:TitleBar Grid.Row="0" Title="ImgConvert" ShowMaximize="True" ShowMinimize="True"/>
+
+        <!-- Main body -->
+        <Grid Grid.Row="1" Margin="20,12,20,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="380"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left column: drop zone + file list -->
+            <Grid Grid.Column="0" Margin="0,0,12,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Drop zone -->
+                <Border Grid.Row="0"
+                        Margin="0,0,0,12"
+                        MinHeight="120"
+                        BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                        BorderThickness="2"
+                        CornerRadius="10"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}"/>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="32" Margin="0,0,0,8" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Drop images here or click to browse"
+                                   FontSize="16" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="JPG · PNG · WEBP · TIFF · HEIF / HEIC"
+                                   Margin="0,4,0,8"
+                                   Opacity="0.7"
+                                   HorizontalAlignment="Center"/>
+                        <ui:Button Content="Browse files…"
+                                   Appearance="Secondary"
+                                   Command="{Binding BrowseFilesCommand}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- File list -->
+                <Border Grid.Row="1"
+                        BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="14,10,14,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" Grid.Column="0">
+                                <TextBlock Text="Queue" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock Margin="8,0,0,0" Opacity="0.6"
+                                           Text="{Binding Items.Count, StringFormat='({0} files)'}"/>
+                            </StackPanel>
+                            <ui:Button Grid.Column="1"
+                                       Content="Clear"
+                                       Appearance="Transparent"
+                                       Command="{Binding ClearCommand}"/>
+                        </Grid>
+
+                        <ListView Grid.Row="1"
+                                  x:Name="FileList"
+                                  ItemsSource="{Binding Items}"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  Padding="6,0,6,6"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="2,2"/>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="10,8"
+                                            CornerRadius="8"
+                                            Background="{DynamicResource SubtleFillColorTertiaryBrush}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Orientation="Vertical">
+                                                <TextBlock Text="{Binding FileName}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding SourcePath}"
+                                                           Opacity="0.55" FontSize="11"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Margin="0,2,0,0" FontSize="11"
+                                                           Foreground="{Binding Status, Converter={StaticResource StatusToBrush}}"
+                                                           Text="{Binding StatusMessage}"/>
+                                            </StackPanel>
+                                            <Border Grid.Column="1"
+                                                    Margin="10,0"
+                                                    Padding="6,2"
+                                                    CornerRadius="4"
+                                                    VerticalAlignment="Center"
+                                                    Background="{DynamicResource ControlFillColorDefaultBrush}">
+                                                <TextBlock Text="{Binding SourceFormat}"
+                                                           FontSize="10" FontWeight="Bold"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="2"
+                                                       Margin="6,0,12,0"
+                                                       Opacity="0.7"
+                                                       VerticalAlignment="Center"
+                                                       Text="{Binding SizeDisplay}"/>
+                                            <Border Grid.Column="3"
+                                                    Padding="6,2"
+                                                    CornerRadius="4"
+                                                    VerticalAlignment="Center"
+                                                    Background="{Binding Status, Converter={StaticResource StatusToBrush}}">
+                                                <TextBlock Text="{Binding Status, Converter={StaticResource StatusToText}}"
+                                                           FontSize="10" FontWeight="SemiBold"
+                                                           Foreground="White"/>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Right column: settings -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+
+                    <ui:Card Margin="0,0,0,12" Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="Target format" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <ComboBox ItemsSource="{Binding TargetFormats}"
+                                      SelectedItem="{Binding SelectedTargetFormat}"
+                                      HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+                    </ui:Card>
+
+                    <ui:Card Margin="0,0,0,12" Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="Output folder" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBox Grid.Column="0"
+                                            Text="{Binding OutputDirectory, UpdateSourceTrigger=PropertyChanged}"
+                                            Margin="0,0,8,0"/>
+                                <ui:Button Grid.Column="1"
+                                           Content="Browse…"
+                                           Command="{Binding BrowseOutputDirCommand}"/>
+                            </Grid>
+                            <CheckBox Margin="0,12,0,0"
+                                      Content="Overwrite existing files"
+                                      IsChecked="{Binding OverwriteExisting}"/>
+                        </StackPanel>
+                    </ui:Card>
+
+                    <ui:Card Margin="0,0,0,12" Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="Encoding options" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+                            <!-- Quality -->
+                            <StackPanel Visibility="{Binding ShowQualitySlider, Converter={StaticResource BoolToVis}}">
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Quality"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Quality}"
+                                               Opacity="0.7"/>
+                                </Grid>
+                                <Slider Minimum="1" Maximum="100"
+                                        Value="{Binding Quality}"
+                                        TickFrequency="10"
+                                        IsSnapToTickEnabled="False"
+                                        Margin="0,0,0,12"/>
+                            </StackPanel>
+
+                            <!-- Lossless -->
+                            <CheckBox Content="Lossless"
+                                      IsChecked="{Binding Lossless}"
+                                      Margin="0,0,0,8"
+                                      Visibility="{Binding ShowLosslessToggle, Converter={StaticResource BoolToVis}}"/>
+
+                            <!-- JPEG progressive -->
+                            <CheckBox Content="Progressive (JPEG)"
+                                      IsChecked="{Binding JpegProgressive}"
+                                      Margin="0,0,0,8"
+                                      Visibility="{Binding ShowProgressiveToggle, Converter={StaticResource BoolToVis}}"/>
+
+                            <!-- PNG compression -->
+                            <StackPanel Visibility="{Binding ShowPngCompression, Converter={StaticResource BoolToVis}}">
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="PNG compression (0–9)"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding PngCompression}" Opacity="0.7"/>
+                                </Grid>
+                                <Slider Minimum="0" Maximum="9"
+                                        Value="{Binding PngCompression}"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"
+                                        Margin="0,0,0,8"/>
+                            </StackPanel>
+
+                            <!-- TIFF compression -->
+                            <StackPanel Visibility="{Binding ShowTiffCompression, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="TIFF compression" Margin="0,4,0,4"/>
+                                <ComboBox ItemsSource="{Binding TiffCompressionChoices}"
+                                          SelectedItem="{Binding SelectedTiffCompression}"
+                                          HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ui:Card>
+
+                    <ui:Card Margin="0,0,0,12" Padding="16">
+                        <StackPanel>
+                            <TextBlock Text="Performance" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Parallel workers" VerticalAlignment="Center"/>
+                                <ui:NumberBox Grid.Column="1"
+                                              Width="100"
+                                              Minimum="1" Maximum="64"
+                                              Value="{Binding MaxParallelism}"/>
+                            </Grid>
+                        </StackPanel>
+                    </ui:Card>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Bottom: action bar -->
+        <Border Grid.Row="2"
+                Padding="20,12"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                BorderThickness="0,1,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                    <ProgressBar Minimum="0" Maximum="1"
+                                 Value="{Binding Progress, Mode=OneWay}"
+                                 Height="6"/>
+                    <TextBlock Margin="0,6,0,0" Opacity="0.75"
+                               Text="{Binding ProgressText}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <ui:Button Content="Cancel"
+                               Appearance="Secondary"
+                               Margin="0,0,8,0"
+                               Command="{Binding CancelCommand}"/>
+                    <ui:Button Content="Convert"
+                               Appearance="Primary"
+                               Command="{Binding StartCommand}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="Play24"/>
+                        </ui:Button.Icon>
+                    </ui:Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</ui:FluentWindow>
