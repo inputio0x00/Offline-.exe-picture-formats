@@ -4,6 +4,7 @@ vcpkg_installed/
 
 # CMake / native build
 native/build/
+native/build-*/
 native/out/
 *.obj
 *.pdb

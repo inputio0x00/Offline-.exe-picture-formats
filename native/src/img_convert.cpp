@@ -1,5 +1,5 @@
 // DLL entry points: dispatch to per-format codecs.
-#define IMG_CONVERT_BUILD_DLL
+// IMG_CONVERT_BUILD_DLL is defined by CMake (target_compile_definitions).
 #include "../include/img_convert.h"
 #include "image.h"
 
