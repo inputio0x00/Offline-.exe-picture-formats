@@ -41,7 +41,6 @@ target_link_libraries(img_convert PRIVATE
     PNG::PNG
     TIFF::TIFF
     WebP::webp
-    WebP::webpdecoder
     libheif::heif
 )
 
